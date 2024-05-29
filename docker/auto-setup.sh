@@ -25,15 +25,24 @@ set -eu -o pipefail
 : "${DBNAME:=temporal}"
 : "${VISIBILITY_DBNAME:=temporal_visibility}"
 : "${DB_PORT:=3306}"
+: "${VISIBILITY_DB_PORT:=${DB_PORT}}"
 
 : "${MYSQL_SEEDS:=}"
 : "${MYSQL_USER:=}"
 : "${MYSQL_PWD:=}"
 : "${MYSQL_TX_ISOLATION_COMPAT:=false}"
 
+: "${VISIBILITY_MYSQL_SEEDS:=${MYSQL_SEEDS}}"
+: "${VISIBILITY_MYSQL_USER:=${MYSQL_USER}}"
+: "${VISIBILITY_MYSQL_PWD:=${MYSQL_PWD}}"
+
 : "${POSTGRES_SEEDS:=}"
 : "${POSTGRES_USER:=}"
 : "${POSTGRES_PWD:=}"
+
+: "${VISIBILITY_POSTGRES_SEEDS:=${POSTGRES_SEEDS}}"
+: "${VISIBILITY_POSTGRES_USER:=${POSTGRES_USER}}"
+: "${VISIBILITY_POSTGRES_PWD:=${POSTGRES_PWD}}"
 
 : "${POSTGRES_TLS_ENABLED:=false}"
 : "${POSTGRES_TLS_DISABLE_HOST_VERIFICATION:=false}"
@@ -191,10 +200,10 @@ setup_mysql_schema() {
     if [[ ${ENABLE_ES} == false ]]; then
       VISIBILITY_SCHEMA_DIR=${TEMPORAL_HOME}/schema/mysql/${MYSQL_VERSION_DIR}/visibility/versioned
       if [[ ${SKIP_DB_CREATE} != true ]]; then
-          temporal-sql-tool --plugin "${DB}" --ep "${MYSQL_SEEDS}" -u "${MYSQL_USER}" -p "${DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" create
+          temporal-sql-tool --plugin "${DB}" --ep "${VISIBILITY_MYSQL_SEEDS}" -u "${VISIBILITY_MYSQL_USER}" -p "${VISIBILITY_DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" create
       fi
-      temporal-sql-tool --plugin "${DB}" --ep "${MYSQL_SEEDS}" -u "${MYSQL_USER}" -p "${DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" setup-schema -v 0.0
-      temporal-sql-tool --plugin "${DB}" --ep "${MYSQL_SEEDS}" -u "${MYSQL_USER}" -p "${DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" update-schema -d "${VISIBILITY_SCHEMA_DIR}"
+      temporal-sql-tool --plugin "${DB}" --ep "${VISIBILITY_MYSQL_SEEDS}" -u "${VISIBILITY_MYSQL_USER}" -p "${VISIBILITY_DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" setup-schema -v 0.0
+      temporal-sql-tool --plugin "${DB}" --ep "${VISIBILITY_MYSQL_SEEDS}" -u "${VISIBILITY_MYSQL_USER}" -p "${VISIBILITY_DB_PORT}" "${MYSQL_CONNECT_ATTR[@]}" --db "${VISIBILITY_DBNAME}" update-schema -d "${VISIBILITY_SCHEMA_DIR}"
     fi
 }
 
@@ -250,12 +259,12 @@ setup_postgres_schema() {
     # Only setup visibility schema if ES is not enabled
     if [[ ${ENABLE_ES} == false ]]; then
       VISIBILITY_SCHEMA_DIR=${TEMPORAL_HOME}/schema/postgresql/${POSTGRES_VERSION_DIR}/visibility/versioned
-      if [[ ${VISIBILITY_DBNAME} != "${POSTGRES_USER}" && ${SKIP_DB_CREATE} != true ]]; then
+      if [[ ${VISIBILITY_DBNAME} != "${VISIBILITY_POSTGRES_USER}" && ${SKIP_DB_CREATE} != true ]]; then
           temporal-sql-tool \
               --plugin ${DB} \
-              --ep "${POSTGRES_SEEDS}" \
-              -u "${POSTGRES_USER}" \
-              -p "${DB_PORT}" \
+              --ep "${VISIBILITY_POSTGRES_SEEDS}" \
+              -u "${VISIBILITY_POSTGRES_USER}" \
+              -p "${VISIBILITY_DB_PORT}" \
               --db "${VISIBILITY_DBNAME}" \
               --tls="${POSTGRES_TLS_ENABLED}" \
               --tls-disable-host-verification="${POSTGRES_TLS_DISABLE_HOST_VERIFICATION}" \
@@ -267,9 +276,9 @@ setup_postgres_schema() {
       fi
       temporal-sql-tool \
           --plugin ${DB} \
-          --ep "${POSTGRES_SEEDS}" \
-          -u "${POSTGRES_USER}" \
-          -p "${DB_PORT}" \
+          --ep "${VISIBILITY_POSTGRES_SEEDS}" \
+          -u "${VISIBILITY_POSTGRES_USER}" \
+          -p "${VISIBILITY_DB_PORT}" \
           --db "${VISIBILITY_DBNAME}" \
           --tls="${POSTGRES_TLS_ENABLED}" \
           --tls-disable-host-verification="${POSTGRES_TLS_DISABLE_HOST_VERIFICATION}" \
@@ -280,9 +289,9 @@ setup_postgres_schema() {
           setup-schema -v 0.0
       temporal-sql-tool \
           --plugin ${DB} \
-          --ep "${POSTGRES_SEEDS}" \
-          -u "${POSTGRES_USER}" \
-          -p "${DB_PORT}" \
+          --ep "${VISIBILITY_POSTGRES_SEEDS}" \
+          -u "${VISIBILITY_POSTGRES_USER}" \
+          -p "${VISIBILITY_DB_PORT}" \
           --db "${VISIBILITY_DBNAME}" \
           --tls="${POSTGRES_TLS_ENABLED}" \
           --tls-disable-host-verification="${POSTGRES_TLS_DISABLE_HOST_VERIFICATION}" \
